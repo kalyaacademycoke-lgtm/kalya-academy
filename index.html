@@ -117,13 +117,14 @@
       animation: pulse-ring 2s infinite;
     }
 
-    /* Form input focus */
+  <!-- Form input focus */
     .ka-input:focus {
       outline: none;
       border-color: #F59E0B;
       box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="text-navy-900">
 
@@ -559,15 +560,15 @@
         <div class="space-y-4">
           <div>
             <label class="block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide">Parent / Guardian Name</label>
-            <input type="text" placeholder="e.g. John Kipchoge" class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all" />
+            <input id="ka-name" type="text" placeholder="e.g. John Kipchoge" class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all" />
           </div>
           <div>
             <label class="block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide">Phone Number</label>
-            <input type="tel" placeholder="e.g. 0712 345 678" class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all" />
+            <input id="ka-phone" type="tel" placeholder="e.g. 0712 345 678" class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all" />
           </div>
           <div>
             <label class="block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide">Child's Grade / Class</label>
-            <select class="ka-input w-full bg-white/5 border border-white/10 text-gray-300 rounded-xl px-4 py-3 text-sm transition-all appearance-none cursor-pointer" style="background-image:none">
+            <select id="ka-grade" class="ka-input w-full bg-white/5 border border-white/10 text-gray-300 rounded-xl px-4 py-3 text-sm transition-all appearance-none cursor-pointer" style="background-image:none">
               <option value="" class="text-gray-800">Select grade...</option>
               <option value="g1" class="text-gray-800">Grade 1</option>
               <option value="g2" class="text-gray-800">Grade 2</option>
@@ -582,9 +583,10 @@
           </div>
           <div>
             <label class="block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide">Message (Optional)</label>
-            <textarea rows="3" placeholder="Any specific questions or special requirements..." class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all resize-none"></textarea>
+            <textarea id="ka-message" rows="3" placeholder="Any specific questions or special requirements..." class="ka-input w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm transition-all resize-none"></textarea>
           </div>
-          <button onclick="handleFormSubmit()" class="w-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-navy-900 font-display font-700 py-3.5 rounded-xl transition-all hover:scale-[1.02] shadow-lg shadow-amber-500/25 mt-2" style="font-weight:700">
+          <p id="ka-form-error" class="text-red-400 text-xs text-center hidden"></p>
+          <button id="ka-submit-btn" onclick="handleFormSubmit()" class="w-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-navy-900 font-display font-700 py-3.5 rounded-xl transition-all hover:scale-[1.02] shadow-lg shadow-amber-500/25 mt-2" style="font-weight:700">
             Submit Inquiry →
           </button>
           <p class="text-gray-500 text-xs text-center">By submitting, you agree to be contacted by Kalya Academy's admissions team. Your details are kept private.</p>
@@ -823,8 +825,56 @@
 
   document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
 
+  // Supabase setup
+  const SUPABASE_URL = 'https://hqpszwcvzysrzatbsnpw.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_j0-nh7FmEiohRTYSzXZxoA_w2XAfdR1';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   // Form submit
-  function handleFormSubmit() {
+  async function handleFormSubmit() {
+    const nameEl = document.getElementById('ka-name');
+    const phoneEl = document.getElementById('ka-phone');
+    const gradeEl = document.getElementById('ka-grade');
+    const messageEl = document.getElementById('ka-message');
+    const errorEl = document.getElementById('ka-form-error');
+    const btn = document.getElementById('ka-submit-btn');
+
+    const name = nameEl.value.trim();
+    const phone = phoneEl.value.trim();
+    const grade = gradeEl.value;
+    const message = messageEl.value.trim();
+
+    errorEl.classList.add('hidden');
+
+    if (!name || !phone) {
+      errorEl.textContent = 'Please enter your name and phone number.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    const { error } = await supabaseClient.from('inquiries').insert([
+      { name: name, phone: phone, child_grade: grade, message: message }
+    ]);
+
+    btn.disabled = false;
+    btn.textContent = 'Submit Inquiry →';
+
+    if (error) {
+      errorEl.textContent = 'Something went wrong. Please try again or call us directly.';
+      errorEl.classList.remove('hidden');
+      console.error(error);
+      return;
+    }
+
+    // Clear form
+    nameEl.value = '';
+    phoneEl.value = '';
+    gradeEl.value = '';
+    messageEl.value = '';
+
     const toast = document.getElementById('toast');
     toast.style.transform = 'translateY(0)';
     toast.style.opacity = '1';
